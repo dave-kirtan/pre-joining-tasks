@@ -27,10 +27,9 @@ def export(
             routers.append(Router(**row))
         except ValidationError as error:
             hostname = row.get("hostname", "<unknown>")
+            message = f"ERROR: could not create Router for '{hostname}'"
             print(
-                Fore.RED
-                + f"ERROR: could not create Router for '{hostname}': {error.errors()}"
-                + Style.RESET_ALL
+                Fore.RED + f"{message}: {error.errors()}" + Style.RESET_ALL
             )
 
     output_file.parent.mkdir(parents=True, exist_ok=True)

@@ -14,7 +14,7 @@ IPV4_PATTERN = re.compile(
 
 
 def is_valid_hostname(hostname: str) -> bool:
-    """Return True when hostname contains only lowercase letters, numbers, and hyphens."""
+    """Return True when hostname uses lowercase letters, numbers, and hyphens."""
     return bool(HOSTNAME_PATTERN.fullmatch(hostname.strip()))
 
 
@@ -37,35 +37,43 @@ def parse_router_csv(file_path: str | Path) -> list[dict[str, str]]:
             site = row.get("site", "").strip()
 
             if not hostname or not is_valid_hostname(hostname):
+                message = (
+                    f"ERROR row {row_number}: invalid hostname "
+                    f"'{hostname or '<empty>'}'. "
+                    "Use only lowercase letters, numbers, and hyphens."
+                )
                 print(
-                    Fore.RED
-                    + f"ERROR row {row_number}: invalid hostname '{hostname or '<empty>'}'. "
-                    + "Use only lowercase letters, numbers, and hyphens."
-                    + Style.RESET_ALL
+                    Fore.RED + message + Style.RESET_ALL
                 )
                 continue
 
             if not is_valid_ipv4(ip_address):
+                message = (
+                    f"ERROR row {row_number}: invalid IPv4 address "
+                    f"'{ip_address or '<empty>'}'."
+                )
                 print(
-                    Fore.RED
-                    + f"ERROR row {row_number}: invalid IPv4 address '{ip_address or '<empty>'}'."
-                    + Style.RESET_ALL
+                    Fore.RED + message + Style.RESET_ALL
                 )
                 continue
 
             if not site:
+                message = (
+                    f"SKIPPED row {row_number}: missing site for hostname "
+                    f"'{hostname}'."
+                )
                 print(
-                    Fore.YELLOW
-                    + f"SKIPPED row {row_number}: missing site for hostname '{hostname}'."
-                    + Style.RESET_ALL
+                    Fore.YELLOW + message + Style.RESET_ALL
                 )
                 continue
 
             if not model:
+                message = (
+                    f"WARNING row {row_number}: missing model for hostname "
+                    f"'{hostname}', using N/A."
+                )
                 print(
-                    Fore.YELLOW
-                    + f"WARNING row {row_number}: missing model for hostname '{hostname}', using N/A."
-                    + Style.RESET_ALL
+                    Fore.YELLOW + message + Style.RESET_ALL
                 )
                 model = "N/A"
 

@@ -1,0 +1,14 @@
+[
+  {
+    "hostname": "tor-sw-01",
+    "ip_address": "10.10.10.5",
+    "model": "Nexus 9300",
+    "site": "TORONTO"
+  },
+  {
+    "hostname": "van-sw-05",
+    "ip_address": "10.30.40.5",
+    "model": "N/A",
+    "site": "VANCOUVER"
+  }
+]

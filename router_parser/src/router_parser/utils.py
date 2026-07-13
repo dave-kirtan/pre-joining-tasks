@@ -1,83 +1,69 @@
 import csv
 import re
-from pathlib import Path
+import colorama
+from colorama import Fore, Style
+colorama.just_fix_windows_console()
 
-from colorama import Fore, Style, init
+def hostname_to_lower(value: str) -> str:
+    """Strip spaces and force lowercase"""
+    if isinstance(value, str):
+        return value.strip().lower()
+    return value
 
-init(autoreset=True)
+def site_to_upper(value: str) -> str:
+    """Strip spaces and force UPPERCASE"""
+    if isinstance(value, str):
+        return value.strip().upper()
+    return value
 
-HOSTNAME_PATTERN = re.compile(r"^[a-z0-9-]+$")
-OCTET_PATTERN = r"(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-IPV4_PATTERN = re.compile(
-    rf"^{OCTET_PATTERN}\.{OCTET_PATTERN}\.{OCTET_PATTERN}\.{OCTET_PATTERN}$"
-)
+hostname_rule=r"^[a-z0-9-]+$"
+octet_rule=r"(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])"
+ip_pattern = rf"^{octet_rule}\.{octet_rule}\.{octet_rule}\.{octet_rule}$"
 
+hostname_pattern=re.compile(hostname_rule)
+ipv4_pattern=re.compile(ip_pattern)
 
-def is_valid_hostname(hostname: str) -> bool:
-    """Return True when hostname uses lowercase letters, numbers, and hyphens."""
-    return bool(HOSTNAME_PATTERN.fullmatch(hostname.strip()))
+def check_hostname(input_hostname):
+    """Check lowercase hostname and return boolean value"""
+    if hostname_pattern.fullmatch(input_hostname):
+        return True
+    return False
 
+def check_ipv4_address(input_ipv4_address):
+    """Check for correct IPv4 address"""
+    if ipv4_pattern.fullmatch(input_ipv4_address):
+        return True
+    return False
 
-def is_valid_ipv4(ip_address: str) -> bool:
-    """Return True when ip_address is a mathematically valid IPv4 address."""
-    return bool(IPV4_PATTERN.fullmatch(ip_address.strip()))
+def process_csv(file_path):
+    valid_rows=[]
 
+    with open(file_path, mode='r', encoding='utf-8') as file:
+        reader=csv.DictReader(file)
 
-def parse_router_csv(file_path: str | Path) -> list[dict[str, str]]:
-    """Parse router rows, clean values, and skip invalid records."""
-    valid_routers: list[dict[str, str]] = []
-
-    with Path(file_path).open(newline="", encoding="utf-8") as csv_file:
-        reader = csv.DictReader(csv_file)
-
-        for row_number, row in enumerate(reader, start=2):
+        for row_n, row in enumerate(reader, start=2):
             hostname = row.get("hostname", "").strip()
             ip_address = row.get("ip_address", "").strip()
             model = row.get("model", "").strip()
             site = row.get("site", "").strip()
 
-            if not hostname or not is_valid_hostname(hostname):
-                message = (
-                    f"ERROR row {row_number}: invalid hostname "
-                    f"'{hostname or '<empty>'}'. "
-                    "Use only lowercase letters, numbers, and hyphens."
-                )
-                print(
-                    Fore.RED + message + Style.RESET_ALL
-                )
+            if not hostname or not check_hostname(hostname):
+                print(f"{Fore.RED}[ERROR] Line {row_n}: Invalid hostname (must use lowercase letters, numbers, and hyphens){Style.RESET_ALL}")
                 continue
 
-            if not is_valid_ipv4(ip_address):
-                message = (
-                    f"ERROR row {row_number}: invalid IPv4 address "
-                    f"'{ip_address or '<empty>'}'."
-                )
-                print(
-                    Fore.RED + message + Style.RESET_ALL
-                )
+            if not check_ipv4_address(ip_address):
+                print((f"{Fore.RED}[ERROR] Line {row_n}: Invalid IPv4 address{Style.RESET_ALL}"))
                 continue
 
-            if not site:
-                message = (
-                    f"SKIPPED row {row_number}: missing site for hostname "
-                    f"'{hostname}'."
-                )
-                print(
-                    Fore.YELLOW + message + Style.RESET_ALL
-                )
+            if not model and not site:
+                print((f"{Fore.RED}[ERROR] Line {row_n}: Missing 'model' and 'site' fields{Style.RESET_ALL}"))
                 continue
 
-            if not model:
-                message = (
-                    f"WARNING row {row_number}: missing model for hostname "
-                    f"'{hostname}', using N/A."
-                )
-                print(
-                    Fore.YELLOW + message + Style.RESET_ALL
-                )
-                model = "N/A"
-
-            valid_routers.append(
+            if not model or not site:
+                print(f"{Fore.YELLOW}[WARNING] Line {row_n}: Skipped. Missing required data (Model: '{model}', Site: '{site}').{Style.RESET_ALL}")
+                continue
+                   
+            valid_rows.append(
                 {
                     "hostname": hostname,
                     "ip_address": ip_address,
@@ -86,4 +72,4 @@ def parse_router_csv(file_path: str | Path) -> list[dict[str, str]]:
                 }
             )
 
-    return valid_routers
+    return valid_rows

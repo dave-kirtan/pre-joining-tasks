@@ -2,14 +2,14 @@ import json
 from pathlib import Path
 
 import typer
+import colorama
 from colorama import Fore, Style
-from pydantic import ValidationError
+colorama.just_fix_windows_console()
 
 from router_parser.models import Router
-from router_parser.utils import parse_router_csv
+from router_parser.utils import process_csv
 
 app = typer.Typer()
-
 
 @app.command()
 def export(
@@ -19,31 +19,30 @@ def export(
     output_file: Path = typer.Option(
         ..., "--output", help="Path where clean router JSON will be written."
     ),
-) -> None:
-    routers: list[Router] = []
+):
+    store_router_objects = []
 
-    for row in parse_router_csv(input_file):
-        try:
-            routers.append(Router(**row))
-        except ValidationError as error:
-            hostname = row.get("hostname", "<unknown>")
-            message = f"ERROR: could not create Router for '{hostname}'"
-            print(
-                Fore.RED + f"{message}: {error.errors()}" + Style.RESET_ALL
-            )
+    for row in process_csv(input_file):
+        router_instance = Router(
+            hostname=row["hostname"],
+            ip_address=row["ip_address"],
+            model=row["model"],
+            site=row["site"]
+        )
+        store_router_objects.append(router_instance)
+    
+    output_data = []
+    for router in store_router_objects:
+        output_data.append({
+            "hostname": router.hostname,
+            "ip_address": router.ip_address,
+            "model": router.model,
+            "site": router.site
+        })
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(
-        json.dumps([router.model_dump() for router in routers], indent=2),
-        encoding="utf-8",
-    )
-
-    print(
-        Fore.GREEN
-        + f"Exported {len(routers)} clean router records to {output_file}"
-        + Style.RESET_ALL
-    )
-
+    with open(output_file, mode='w', encoding='utf-8') as json_file:
+        json.dump(output_data, json_file, indent=2)
 
 if __name__ == "__main__":
     app()
